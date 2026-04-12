@@ -88,5 +88,6 @@ See `test/widget_test.dart` for a minimal example.
 
 ## Further reading
 
+- [Auth flow: session, tokens, and API calls](auth-flow.md) — charts for signed-in vs public requests with `SessionController` and Dio.
 - [Riverpod: Getting started](https://riverpod.dev/docs/getting_started)
 - [Code generation (riverpod_generator)](https://riverpod.dev/docs/concepts/about_code_generation)

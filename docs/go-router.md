@@ -65,5 +65,6 @@ Keep path templates in `route_paths.dart` as documentation or use small helper f
 
 ## Further reading
 
+- [Auth flow and redirects after login/logout](auth-flow.md) — session state drives `/splash` and `/login`.
 - [go_router — Navigation](https://pub.dev/documentation/go_router/latest/topics/Navigation-topic.html)
 - [go_router — Redirection](https://pub.dev/documentation/go_router/latest/topics/Redirection-topic.html)

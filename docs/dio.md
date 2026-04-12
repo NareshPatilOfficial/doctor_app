@@ -67,5 +67,6 @@ cancelToken.cancel();
 
 ## Further reading
 
+- [Auth, session, and Bearer token flow](auth-flow.md) — how Dio + `TokenStorage` + login fit together (with diagrams).
 - [Dio documentation](https://pub.dev/documentation/dio/latest/dio/dio-library.html)
 - [CancelToken](https://pub.dev/documentation/dio/latest/dio/CancelToken-class.html)

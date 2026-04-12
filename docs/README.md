@@ -3,9 +3,10 @@
 Welcome. If you are new to Flutter, read these in order:
 
 1. **[ARCHITECTURE.md](../ARCHITECTURE.md)** (repo root) — folder layout, flavors, how pieces connect.
-2. **[riverpod.md](riverpod.md)** — state management: providers, reading state in widgets, adding new providers.
-3. **[go-router.md](go-router.md)** — navigation: routes, redirects, role-based access, scaling route tables.
-4. **[dio.md](dio.md)** — HTTP: the shared `Dio` client, interceptors, errors, cancel tokens.
+2. **[auth-flow.md](auth-flow.md)** — login flow: session vs token, auth vs unauth API calls, diagrams (Dio + Riverpod).
+3. **[riverpod.md](riverpod.md)** — state management: providers, reading state in widgets, adding new providers.
+4. **[go-router.md](go-router.md)** — navigation: routes, redirects, role-based access, scaling route tables.
+5. **[dio.md](dio.md)** — HTTP: the shared `Dio` client, interceptors, errors, cancel tokens.
 
 **Flutter basics (official):** [flutter.dev/docs](https://docs.flutter.dev/)
 

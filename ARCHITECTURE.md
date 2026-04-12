@@ -4,6 +4,7 @@ This document is the **high-level map** of the Flutter app. For **step-by-step g
 
 | Topic | Doc |
 |--------|-----|
+| Auth, session, tokens, login + Dio flow | [docs/auth-flow.md](docs/auth-flow.md) |
 | Riverpod (state, providers, overrides) | [docs/riverpod.md](docs/riverpod.md) |
 | go_router (navigation, redirects, scaling) | [docs/go-router.md](docs/go-router.md) |
 | Dio (HTTP, interceptors, cancel tokens) | [docs/dio.md](docs/dio.md) |
@@ -94,3 +95,17 @@ After editing `@freezed`, `json_serializable`, or `@Riverpod` types:
 ```bash
 dart run build_runner build --delete-conflicting-outputs
 ```
+
+
+flowchart TD
+  A[App starts main.dart] --> B[ProviderScope + AppConfig]
+  B --> C[SessionController.build]
+  C --> D{Token in SecureStorage?}
+  D -->|No| E[AuthState.unauthenticated]
+  D -->|Yes| F{User JSON valid?}
+  F -->|No| G[clearSession]
+  G --> E
+  F -->|Yes| H[AuthState.authenticated]
+  E --> I[GoRouter redirect → /login]
+  H --> J[GoRouter redirect → role home]
+
