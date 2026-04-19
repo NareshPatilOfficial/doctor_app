@@ -1,7 +1,7 @@
 // =============================================================================
 // main_prod.dart — Production entrypoint
 // =============================================================================
-// Production [AppConfig]: logging off, mock auth off. Use with flavor `prod`.
+// Production [AppConfig]: logging off. Use with flavor `prod`.
 // flutter run --flavor prod -t lib/main_prod.dart
 // =============================================================================
 
@@ -17,8 +17,7 @@ import 'core/config/flavor.dart';
 ///
 /// - Android: `flutter run --flavor prod -t lib/main_prod.dart`
 /// - iOS: `com.yourorg.doctorbridge` (example release bundle id)
-/// - Set [AppConfig.enableNetworkLogging] to false and [enableMockAuth] false for
-///   store builds once real auth ships.
+/// - Set [AppConfig.enableNetworkLogging] to false for store builds as needed.
 Future<void> main() async {
   await bootstrap();
   runApp(
@@ -29,7 +28,6 @@ Future<void> main() async {
             flavor: Flavor.prod,
             baseUrl: 'https://api.doctorbridge.invalid',
             enableNetworkLogging: false,
-            enableMockAuth: false,
           ),
         ),
       ],

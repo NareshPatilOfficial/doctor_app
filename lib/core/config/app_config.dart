@@ -1,7 +1,7 @@
 // =============================================================================
 // app_config.dart — Per-environment API and feature flags
 // =============================================================================
-// [AppConfig] holds baseUrl, logging, mock auth. [appConfigProvider] must be
+// [AppConfig] holds baseUrl and logging. [appConfigProvider] must be
 // overridden in main() via ProviderScope (see main_*.dart). Features should
 // use ref.watch(appConfigProvider) instead of literals. See docs/riverpod.md.
 // =============================================================================
@@ -19,15 +19,11 @@ class AppConfig {
     required this.flavor,
     required this.baseUrl,
     required this.enableNetworkLogging,
-    this.enableMockAuth = true,
   });
 
   final Flavor flavor;
   final String baseUrl;
   final bool enableNetworkLogging;
-
-  /// When true, login screen can pick a role without a backend.
-  final bool enableMockAuth;
 
   String get environmentName => flavor.name;
 }

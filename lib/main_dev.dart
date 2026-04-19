@@ -27,7 +27,12 @@ Future<void> main() async {
         appConfigProvider.overrideWithValue(
           const AppConfig(
             flavor: Flavor.dev,
-            baseUrl: 'https://api-dev.doctorbridge.invalid',
+            // Web uses `localhost` — the **Android emulator** cannot reach your PC
+            // via `localhost` (that points at the emulator itself). Use the special
+            // alias to the host machine: `http://10.0.2.2:PORT` (same as localhost on
+            // your computer). iOS Simulator often works with `http://127.0.0.1:PORT`.
+            // Production/stage: prefer HTTPS (no cleartext restrictions).
+            baseUrl: 'http://10.0.2.2:3000',
             enableNetworkLogging: true,
           ),
         ),

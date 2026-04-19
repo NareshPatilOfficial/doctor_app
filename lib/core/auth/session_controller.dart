@@ -1,14 +1,13 @@
 // =============================================================================
 // session_controller.dart — Auth session AsyncNotifier
 // =============================================================================
-// Loads token + user from [TokenStorage] on startup; [loginMock] for dev;
+// Loads token + user from [TokenStorage] on startup;
 // [logout] / [logoutOnUnauthorized] clear storage and update state. Router and
 // Dio 401 handler depend on this. See docs/riverpod.md.
 // =============================================================================
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../config/app_config.dart';
 import 'auth_state.dart';
 import 'token_storage.dart';
 import 'user.dart';
@@ -17,6 +16,9 @@ part 'session_controller.g.dart';
 
 @Riverpod(keepAlive: true)
 class SessionController extends _$SessionController {
+  /// One-shot redirect after patient login (e.g. go_router [extra] without query).
+  String? _pendingPostLoginPath;
+
   @override
   Future<AuthState> build() async {
     final storage = ref.read(tokenStorageProvider);
@@ -29,21 +31,29 @@ class SessionController extends _$SessionController {
       await storage.clearSession();
       return const AuthState.unauthenticated();
     }
+    // Optional: validate token with GET profile — add when API is wired.
     return AuthState.authenticated(user);
   }
 
-  Future<void> loginMock(UserRole role) async {
-    final config = ref.read(appConfigProvider);
-    if (!config.enableMockAuth) {
-      return;
-    }
-    final user = User(
-      id: 'mock-user',
-      displayName: 'Mock ${role.name}',
-      role: role,
-    );
+  /// Set before login when [LoginLaunchExtra] provides a return path (no query).
+  void setPendingPostLoginPath(String? path) {
+    _pendingPostLoginPath = path;
+  }
+
+  /// Consumed by [routerProvider] redirect when leaving `/login` after auth.
+  String? takePendingPostLoginPath() {
+    final p = _pendingPostLoginPath;
+    _pendingPostLoginPath = null;
+    return p;
+  }
+
+  /// Persist JWT + user after successful API login (matches web localStorage + Redux).
+  Future<void> applyAuthenticatedSession({
+    required String accessToken,
+    required User user,
+  }) async {
     await ref.read(tokenStorageProvider).persistSession(
-          accessToken: 'mock-access-token',
+          accessToken: accessToken,
           refreshToken: null,
           user: user,
         );
@@ -51,6 +61,7 @@ class SessionController extends _$SessionController {
   }
 
   Future<void> logout() async {
+    _pendingPostLoginPath = null;
     await ref.read(tokenStorageProvider).clearSession();
     state = const AsyncData(AuthState.unauthenticated());
   }
