@@ -44,6 +44,7 @@ abstract final class RoutePaths {
   /// Web `patientBookAppointmentViaLink` segment (book via deep link).
   static const patientBookAppointmentViaLink = '/patient/patientBookAppointmentViaLink';
   static const patientProfile = '/patient/profile';
+  static const patientSwitchUser = '/patient/switch-user';
 
   /// Query on `/login` for post-auth redirect (patient deep link).
   static const returnUrlQueryParam = 'returnUrl';

@@ -20,6 +20,11 @@ const List<DrawerDestination> patientDrawerDestinations = [
     icon: Icons.person_outline,
   ),
   DrawerDestination(
+    label: 'Switch user',
+    goPath: RoutePaths.patientSwitchUser,
+    icon: Icons.switch_account_outlined,
+  ),
+  DrawerDestination(
     label: 'Book via link',
     goPath: RoutePaths.patientBookAppointmentViaLink,
     icon: Icons.link_outlined,

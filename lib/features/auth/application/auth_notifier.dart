@@ -1,9 +1,14 @@
 import 'package:doctorbridge_mobile_ui/core/async/async_tracker.dart';
 import 'package:doctorbridge_mobile_ui/core/auth/session_controller.dart';
+import 'package:doctorbridge_mobile_ui/core/auth/token_storage.dart';
 import 'package:doctorbridge_mobile_ui/core/auth/user.dart';
+import 'package:doctorbridge_mobile_ui/features/auth/auth_user_merge.dart';
 import 'package:doctorbridge_mobile_ui/features/auth/data/auth_repository.dart';
 import 'package:doctorbridge_mobile_ui/features/auth/data/auth_repository_providers.dart';
 import 'package:doctorbridge_mobile_ui/features/auth/data/models/auth_api_models.dart';
+import 'package:doctorbridge_mobile_ui/features/patient/application/patient_account_controller.dart';
+import 'package:doctorbridge_mobile_ui/features/patient/data/models/user_profile_dto.dart';
+import 'package:doctorbridge_mobile_ui/features/patient/data/users_repository_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'auth_operation_ids.dart';
@@ -72,10 +77,7 @@ class AuthNotifier extends _$AuthNotifier {
         password: password,
         role: role,
       );
-      await ref.read(sessionControllerProvider.notifier).applyAuthenticatedSession(
-            accessToken: payload.jwtToken,
-            user: payload.user,
-          );
+      await _persistLinkedIdsApplySessionAndHydratePatient(payload);
       tracker.fulfill(op);
       return payload;
     } on AuthRepositoryException catch (e) {
@@ -159,10 +161,7 @@ class AuthNotifier extends _$AuthNotifier {
         phone10Digits: phone10Digits,
         otpCode: otpCode,
       );
-      await ref.read(sessionControllerProvider.notifier).applyAuthenticatedSession(
-            accessToken: payload.jwtToken,
-            user: payload.user,
-          );
+      await _persistLinkedIdsApplySessionAndHydratePatient(payload);
       tracker.fulfill(op);
       return payload;
     } on AuthRepositoryException catch (e) {
@@ -174,5 +173,59 @@ class AuthNotifier extends _$AuthNotifier {
     } finally {
       tracker.recoverStuckFetching(op);
     }
+  }
+
+  /// Persists patient linked-account ids, writes token so Dio can GET profile,
+  /// merges `/api/v1/users/{id}` into [User], then hydrates patient state.
+  Future<void> _persistLinkedIdsApplySessionAndHydratePatient(AuthLoginPayload payload) async {
+    final storage = ref.read(tokenStorageProvider);
+    if (payload.user.role == UserRole.patient && payload.resolvedLinkedUserIds.isNotEmpty) {
+      await storage.persistPatientLinkedAccounts(
+        userIds: payload.resolvedLinkedUserIds,
+        activeUserId: payload.resolvedLinkedUserIds.first,
+      );
+    } else {
+      await storage.clearPatientLinkedAccounts();
+    }
+    // Token must be on disk before [UsersRepository.getUser] (Dio auth header).
+    await storage.persistSession(
+      accessToken: payload.jwtToken,
+      refreshToken: null,
+      user: payload.user,
+    );
+    UserProfileDto? profile;
+    final int? primaryId = _primaryProfileUserId(payload);
+    if (primaryId != null) {
+      try {
+        profile = await ref.read(usersRepositoryProvider).getUser(primaryId);
+      } on Object {
+        profile = null;
+      }
+    }
+    final User sessionUser =
+        profile != null ? mergeLoginUserWithProfile(payload.user, profile) : payload.user;
+    await ref.read(sessionControllerProvider.notifier).applyAuthenticatedSession(
+          accessToken: payload.jwtToken,
+          user: sessionUser,
+        );
+    if (payload.user.role == UserRole.patient) {
+      try {
+        await ref.read(patientAccountControllerProvider.notifier).hydrateAfterLogin(
+              payload,
+              preloadedProfile: profile,
+            );
+      } on Object {
+        // Session still valid with login + optional profile merge.
+      }
+    }
+  }
+
+  /// First id from login [userIds], else parsed [User.id].
+  int? _primaryProfileUserId(AuthLoginPayload payload) {
+    final linked = payload.resolvedLinkedUserIds;
+    if (linked.isNotEmpty) {
+      return linked.first;
+    }
+    return int.tryParse(payload.user.id);
   }
 }

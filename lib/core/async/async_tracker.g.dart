@@ -47,7 +47,7 @@ final class AsyncTrackerProvider
   }
 }
 
-String _$asyncTrackerHash() => r'006bd16a8f90271b44dc4eede25987201aba5be0';
+String _$asyncTrackerHash() => r'8e0f9d638201001bc2eb44c21b7ade4b1b7e1270';
 
 /// Global map of async lifecycle metadata by operation id string.
 /// Domain data stays in feature notifiers; this only tracks loading / errors / extras.

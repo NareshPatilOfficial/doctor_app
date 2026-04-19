@@ -25,6 +25,14 @@ abstract class TokenStorage {
     required User user,
   });
   Future<void> clearSession();
+
+  /// Patient multi-account: linked user ids from login + currently selected id.
+  Future<void> persistPatientLinkedAccounts({
+    required List<int> userIds,
+    required int activeUserId,
+  });
+  Future<({List<int> userIds, int activeUserId})?> readPatientLinkedAccounts();
+  Future<void> clearPatientLinkedAccounts();
 }
 
 @Riverpod(keepAlive: true)
@@ -38,6 +46,8 @@ class SecureTokenStorage implements TokenStorage {
   static const _kAccess = 'doctorbridge_access_token';
   static const _kRefresh = 'doctorbridge_refresh_token';
   static const _kUser = 'doctorbridge_user_json';
+  static const _kPatientUserIds = 'doctorbridge_patient_user_ids_json';
+  static const _kActivePatientUserId = 'doctorbridge_active_patient_user_id';
 
   @override
   Future<String?> readAccessToken() => _storage.read(key: _kAccess);
@@ -76,5 +86,51 @@ class SecureTokenStorage implements TokenStorage {
     await _storage.delete(key: _kAccess);
     await _storage.delete(key: _kRefresh);
     await _storage.delete(key: _kUser);
+    await clearPatientLinkedAccounts();
+  }
+
+  @override
+  Future<void> persistPatientLinkedAccounts({
+    required List<int> userIds,
+    required int activeUserId,
+  }) async {
+    await _storage.write(key: _kPatientUserIds, value: jsonEncode(userIds));
+    await _storage.write(key: _kActivePatientUserId, value: activeUserId.toString());
+  }
+
+  @override
+  Future<({List<int> userIds, int activeUserId})?> readPatientLinkedAccounts() async {
+    final rawIds = await _storage.read(key: _kPatientUserIds);
+    final rawActive = await _storage.read(key: _kActivePatientUserId);
+    if (rawIds == null || rawIds.isEmpty || rawActive == null || rawActive.isEmpty) {
+      return null;
+    }
+    try {
+      final decoded = jsonDecode(rawIds);
+      if (decoded is! List<dynamic>) {
+        return null;
+      }
+      final ids = <int>[];
+      for (final e in decoded) {
+        if (e is int) {
+          ids.add(e);
+        } else if (e is num) {
+          ids.add(e.toInt());
+        }
+      }
+      final active = int.tryParse(rawActive);
+      if (active == null || ids.isEmpty) {
+        return null;
+      }
+      return (userIds: ids, activeUserId: active);
+    } on Object {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> clearPatientLinkedAccounts() async {
+    await _storage.delete(key: _kPatientUserIds);
+    await _storage.delete(key: _kActivePatientUserId);
   }
 }

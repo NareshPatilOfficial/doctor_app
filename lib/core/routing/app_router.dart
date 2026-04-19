@@ -27,6 +27,7 @@ import '../../features/doctor/preview_report/doctor_preview_report_screen.dart';
 import '../../features/patient/appointments/patient_appointments_screen.dart';
 import '../../features/patient/book_appointment/patient_book_appointment_screen.dart';
 import '../../features/patient/book_via_link/patient_book_via_link_screen.dart';
+import '../../features/patient/presentation/switch_user/patient_switch_user_screen.dart';
 import '../../features/patient/profile/patient_profile_screen.dart';
 import '../../features/receptionist/appointments/receptionist_appointments_screen.dart';
 import '../../features/receptionist/dashboard/receptionist_dashboard_screen.dart';
@@ -193,6 +194,10 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: RoutePaths.patientProfile,
         builder: (context, state) => const PatientProfileScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.patientSwitchUser,
+        builder: (context, state) => const PatientSwitchUserScreen(),
       ),
       GoRoute(
         path: RoutePaths.chemistDashboard,

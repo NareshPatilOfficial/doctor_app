@@ -83,7 +83,27 @@ class AuthRepository {
     }
     final userMap = Map<String, dynamic>.from(data)..remove('jwtToken');
     final user = User.fromAuthResponse(userMap);
-    return AuthLoginPayload(jwtToken: jwt, user: user);
+    return AuthLoginPayload(
+      jwtToken: jwt,
+      user: user,
+      userIds: _parseUserIds(data['userIds']),
+      mfaRequired: data['mfaRequired'] as bool? ?? false,
+    );
+  }
+
+  static List<int>? _parseUserIds(Object? raw) {
+    if (raw is! List<dynamic>) {
+      return null;
+    }
+    final out = <int>[];
+    for (final e in raw) {
+      if (e is int) {
+        out.add(e);
+      } else if (e is num) {
+        out.add(e.toInt());
+      }
+    }
+    return out.isEmpty ? null : out;
   }
 
   String _messageOrDefault(DioException e, String fallback) {

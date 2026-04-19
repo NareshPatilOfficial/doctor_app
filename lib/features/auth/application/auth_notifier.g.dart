@@ -12,6 +12,10 @@ part of 'auth_notifier.dart';
 ///
 /// Dio calls go through [AuthRepository]; [AsyncTracker] records loading/errors
 /// per [AuthOperationIds] for shared UI (spinners, messages).
+///
+/// In-flight calls are **coalesced** only when the request parameters match
+/// (same Future for double-taps). A concurrent call with **different** inputs
+/// throws [AuthRepositoryException] so callers never receive another user's result.
 
 @ProviderFor(AuthNotifier)
 const authProvider = AuthNotifierProvider._();
@@ -20,11 +24,19 @@ const authProvider = AuthNotifierProvider._();
 ///
 /// Dio calls go through [AuthRepository]; [AsyncTracker] records loading/errors
 /// per [AuthOperationIds] for shared UI (spinners, messages).
+///
+/// In-flight calls are **coalesced** only when the request parameters match
+/// (same Future for double-taps). A concurrent call with **different** inputs
+/// throws [AuthRepositoryException] so callers never receive another user's result.
 final class AuthNotifierProvider extends $NotifierProvider<AuthNotifier, void> {
   /// Coordinates auth API calls and [SessionController] persistence.
   ///
   /// Dio calls go through [AuthRepository]; [AsyncTracker] records loading/errors
   /// per [AuthOperationIds] for shared UI (spinners, messages).
+  ///
+  /// In-flight calls are **coalesced** only when the request parameters match
+  /// (same Future for double-taps). A concurrent call with **different** inputs
+  /// throws [AuthRepositoryException] so callers never receive another user's result.
   const AuthNotifierProvider._()
     : super(
         from: null,
@@ -52,12 +64,16 @@ final class AuthNotifierProvider extends $NotifierProvider<AuthNotifier, void> {
   }
 }
 
-String _$authNotifierHash() => r'b8239003d3fcd94e542981244aa13055e27c4449';
+String _$authNotifierHash() => r'd2cfc9aa596768c9d74e298dd9868d972e862429';
 
 /// Coordinates auth API calls and [SessionController] persistence.
 ///
 /// Dio calls go through [AuthRepository]; [AsyncTracker] records loading/errors
 /// per [AuthOperationIds] for shared UI (spinners, messages).
+///
+/// In-flight calls are **coalesced** only when the request parameters match
+/// (same Future for double-taps). A concurrent call with **different** inputs
+/// throws [AuthRepositoryException] so callers never receive another user's result.
 
 abstract class _$AuthNotifier extends $Notifier<void> {
   void build();
