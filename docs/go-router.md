@@ -7,6 +7,7 @@
 - **`lib/core/routing/route_paths.dart`** — string constants for every path (avoid typos).
 - **`lib/core/routing/app_router.dart`** — `GoRouter` + `redirect` logic + list of `GoRoute`s.
 - **`lib/core/routing/role_route_extension.dart`** — maps `UserRole` → home path and `/admin`, `/doctor`, etc.
+- **`lib/shared/widgets/app_drawer/`** — role-based **navigation drawer** (`AppRoleDrawer`): per-role destination lists under `roles/<role>/`, shared **Sign out** (calls `SessionController.logout`; router redirects to `/login`). Stubs use [`AppPageScaffold`](../../lib/shared/widgets/app_page_scaffold.dart), which attaches this drawer when authenticated.
 
 ## Beginner: navigation in widgets
 
