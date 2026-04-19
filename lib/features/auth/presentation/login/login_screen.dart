@@ -1,11 +1,13 @@
 import 'dart:async' show Timer, unawaited;
 
+import 'package:doctorbridge_mobile_ui/core/async/async_selectors.dart';
+import 'package:doctorbridge_mobile_ui/core/async/async_tracker.dart';
 import 'package:doctorbridge_mobile_ui/core/auth/session_controller.dart';
 import 'package:doctorbridge_mobile_ui/core/auth/user.dart';
 import 'package:doctorbridge_mobile_ui/core/routing/route_paths.dart';
 import 'package:doctorbridge_mobile_ui/core/utils/phone_utils.dart';
 import 'package:doctorbridge_mobile_ui/features/auth/application/auth_notifier.dart';
-import 'package:doctorbridge_mobile_ui/features/auth/data/auth_repository.dart';
+import 'package:doctorbridge_mobile_ui/features/auth/application/auth_operation_ids.dart';
 import 'package:doctorbridge_mobile_ui/features/auth/presentation/login/login_launch_extra.dart';
 import 'package:doctorbridge_mobile_ui/features/auth/presentation/otp_widgets/patient_otp_section.dart';
 import 'package:doctorbridge_mobile_ui/features/auth/presentation/widgets/role_selector.dart';
@@ -29,10 +31,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   UserRole _role = UserRole.doctor;
 
   bool _showSendOtp = true;
-  String? _sendError;
-  String? _verifyError;
-  bool _sendLoading = false;
-  bool _verifyLoading = false;
+  /// Client-side validation only; API errors use [AsyncTracker] + [asyncErrorProvider].
+  String? _validationSendError;
   int _resendSeconds = 0;
   Timer? _resendTimer;
 
@@ -47,7 +47,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _applyLaunchArgs());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(asyncTrackerProvider.notifier)
+        ..reset(AuthOperationIds.loginWithPassword)
+        ..reset(AuthOperationIds.sendPatientOtp)
+        ..reset(AuthOperationIds.patientLoginWithOtp);
+      _applyLaunchArgs();
+    });
   }
 
   void _applyLaunchArgs() {
@@ -71,19 +77,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _resetPatientOtpIfNeeded(UserRole next) {
+    final tracker = ref.read(asyncTrackerProvider.notifier);
     if (_role == UserRole.patient && next != UserRole.patient) {
       _showSendOtp = true;
-      _sendError = null;
-      _verifyError = null;
+      _validationSendError = null;
       _resendTimer?.cancel();
       _resendSeconds = 0;
+      tracker
+        ..reset(AuthOperationIds.sendPatientOtp)
+        ..reset(AuthOperationIds.patientLoginWithOtp);
     }
     if (next == UserRole.patient && _role != UserRole.patient) {
       _showSendOtp = true;
-      _sendError = null;
-      _verifyError = null;
+      _validationSendError = null;
       _resendTimer?.cancel();
       _resendSeconds = 0;
+      tracker
+        ..reset(AuthOperationIds.sendPatientOtp)
+        ..reset(AuthOperationIds.patientLoginWithOtp);
     }
   }
 
@@ -103,28 +114,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
     FocusScope.of(context).unfocus();
-    setState(() {
-      _sendError = null;
-      _verifyError = null;
-    });
     try {
       await ref.read(authProvider.notifier).loginWithPassword(
             phone10Digits: digits,
             password: _password.text,
             role: _role,
           );
-    } on AuthRepositoryException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message)),
-        );
-      }
-    } on Object catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(AuthRepository.genericLoginError)),
-        );
-      }
+    } on Object {
+      // Error message is in [AsyncTracker]; [ref.listen] shows a SnackBar.
     }
   }
 
@@ -148,13 +145,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _sendOtp({bool resend = false}) async {
     final digits = PhoneUtils.stripToTenDigits(_phone.text);
     if (digits == null) {
-      setState(() => _sendError = 'Enter a valid 10-digit phone number');
+      setState(() => _validationSendError = 'Enter a valid 10-digit phone number');
       return;
     }
-    setState(() {
-      _sendLoading = true;
-      _sendError = null;
-    });
+    setState(() => _validationSendError = null);
     try {
       await ref.read(authProvider.notifier).sendPatientOtp(phone10Digits: digits);
       if (!mounted) {
@@ -164,23 +158,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (!resend) {
           _showSendOtp = false;
         }
-        _sendLoading = false;
       });
       _startResendCooldown();
-    } on AuthRepositoryException catch (e) {
-      if (mounted) {
-        setState(() {
-          _sendLoading = false;
-          _sendError = e.message;
-        });
-      }
-    } on Object catch (_) {
-      if (mounted) {
-        setState(() {
-          _sendLoading = false;
-          _sendError = 'Invalid phone number';
-        });
-      }
+    } on Object {
+      // API message is in [AsyncTracker].
     }
   }
 
@@ -189,36 +170,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (digits == null || otp.length != 6) {
       return;
     }
-    setState(() {
-      _verifyLoading = true;
-      _verifyError = null;
-    });
     try {
       await ref.read(authProvider.notifier).patientLoginWithOtp(
             phone10Digits: digits,
             otpCode: otp,
           );
-    } on AuthRepositoryException catch (e) {
-      if (mounted) {
-        setState(() {
-          _verifyError = e.message;
-        });
-      }
-    } on Object catch (_) {
-      if (mounted) {
-        setState(() {
-          _verifyError = 'Invalid OTP';
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _verifyLoading = false);
-      }
+    } on Object {
+      // API message is in [AsyncTracker].
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final passwordLoginFetching =
+        ref.watch(asyncIsFetchingProvider(AuthOperationIds.loginWithPassword));
+    final sendOtpFetching = ref.watch(asyncIsFetchingProvider(AuthOperationIds.sendPatientOtp));
+    final verifyOtpFetching =
+        ref.watch(asyncIsFetchingProvider(AuthOperationIds.patientLoginWithOtp));
+    final apiSendError = ref.watch(asyncErrorProvider(AuthOperationIds.sendPatientOtp));
+    final verifyError = ref.watch(asyncErrorProvider(AuthOperationIds.patientLoginWithOtp));
+
+    ref.listen(asyncErrorProvider(AuthOperationIds.loginWithPassword), (prev, next) {
+      if (next != null && next.isNotEmpty && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(next)));
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(title: const Text('Sign in')),
       body: ListView(
@@ -258,10 +235,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             const SizedBox(height: 24),
             FilledButton(
-              onPressed: () {
-                unawaited(_submitPassword());
-              },
-              child: const Text('Sign in'),
+              onPressed: passwordLoginFetching
+                  ? null
+                  : () {
+                      unawaited(_submitPassword());
+                    },
+              child: passwordLoginFetching
+                  ? const SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Sign in'),
             ),
           ] else ...[
             PatientOtpSection(
@@ -271,10 +256,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 unawaited(_sendOtp());
               },
               onVerify: _verifyOtp,
-              sendLoading: _sendLoading,
-              verifyLoading: _verifyLoading,
-              sendError: _sendError,
-              verifyError: _verifyError,
+              sendLoading: sendOtpFetching,
+              verifyLoading: verifyOtpFetching,
+              sendError: _validationSendError ?? apiSendError,
+              verifyError: verifyError,
               showSendStep: _showSendOtp,
               resendSecondsLeft: _resendSeconds,
               onResend: () {

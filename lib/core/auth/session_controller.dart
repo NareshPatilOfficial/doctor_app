@@ -8,6 +8,7 @@
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../async/async_tracker.dart';
 import 'auth_state.dart';
 import 'token_storage.dart';
 import 'user.dart';
@@ -64,6 +65,7 @@ class SessionController extends _$SessionController {
     _pendingPostLoginPath = null;
     await ref.read(tokenStorageProvider).clearSession();
     state = const AsyncData(AuthState.unauthenticated());
+    ref.read(asyncTrackerProvider.notifier).resetAll();
   }
 
   /// Called from the Dio stack when the API returns 401.

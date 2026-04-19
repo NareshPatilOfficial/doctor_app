@@ -9,13 +9,22 @@ part of 'auth_notifier.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 /// Coordinates auth API calls and [SessionController] persistence.
+///
+/// Dio calls go through [AuthRepository]; [AsyncTracker] records loading/errors
+/// per [AuthOperationIds] for shared UI (spinners, messages).
 
 @ProviderFor(AuthNotifier)
 const authProvider = AuthNotifierProvider._();
 
 /// Coordinates auth API calls and [SessionController] persistence.
+///
+/// Dio calls go through [AuthRepository]; [AsyncTracker] records loading/errors
+/// per [AuthOperationIds] for shared UI (spinners, messages).
 final class AuthNotifierProvider extends $NotifierProvider<AuthNotifier, void> {
   /// Coordinates auth API calls and [SessionController] persistence.
+  ///
+  /// Dio calls go through [AuthRepository]; [AsyncTracker] records loading/errors
+  /// per [AuthOperationIds] for shared UI (spinners, messages).
   const AuthNotifierProvider._()
     : super(
         from: null,
@@ -43,9 +52,12 @@ final class AuthNotifierProvider extends $NotifierProvider<AuthNotifier, void> {
   }
 }
 
-String _$authNotifierHash() => r'a3fca604ebfafade18886e2816ffab5be6b2d3a6';
+String _$authNotifierHash() => r'b8239003d3fcd94e542981244aa13055e27c4449';
 
 /// Coordinates auth API calls and [SessionController] persistence.
+///
+/// Dio calls go through [AuthRepository]; [AsyncTracker] records loading/errors
+/// per [AuthOperationIds] for shared UI (spinners, messages).
 
 abstract class _$AuthNotifier extends $Notifier<void> {
   void build();

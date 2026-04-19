@@ -6,6 +6,7 @@ This document is the **high-level map** of the Flutter app. For **step-by-step g
 |--------|-----|
 | Auth, session, tokens, login + Dio flow | [docs/auth-flow.md](docs/auth-flow.md) |
 | Riverpod (state, providers, overrides) | [docs/riverpod.md](docs/riverpod.md) |
+| AsyncTracker (central loading/errors per operation) | [docs/async-architecture.md](docs/async-architecture.md), [docs/async-examples.md](docs/async-examples.md) |
 | go_router (navigation, redirects, scaling) | [docs/go-router.md](docs/go-router.md) |
 | Dio (HTTP, interceptors, cancel tokens) | [docs/dio.md](docs/dio.md) |
 
@@ -26,6 +27,7 @@ The codebase is **feature-first**: new work usually adds folders under `lib/feat
 | `app/` | App shell: `bootstrap()` (startup), `App` widget (`MaterialApp.router`). |
 | `core/config/` | `Flavor`, `AppConfig`, `appConfigProvider` (overridden per environment). |
 | `core/network/` | Shared `Dio`, interceptors, `ApiException` types. |
+| `core/async/` | `AsyncTracker` + selectors: global per-operation loading/errors (see [docs/async-architecture.md](docs/async-architecture.md)). |
 | `core/auth/` | Tokens, session (`AuthState`, `User`, `SessionController`). |
 | `core/routing/` | `GoRouter`, path constants, role → route helpers. |
 | `core/theme/` | `ThemeData` for the whole app. |
