@@ -32,7 +32,10 @@ class PatientAccountController extends _$PatientAccountController {
     return const PatientAccountState.inactive();
   }
 
-  /// After login: [AuthNotifier] may pass [preloadedProfile] from GET `/api/v1/users/{id}`.
+  /// After login: [AuthNotifier] passes [preloadedProfile] from the same
+  /// `GET /api/v1/users/{active}` it used to merge [User], so we do **not** GET again.
+  ///
+  /// If [preloadedProfile] is missing or does not match [active], we fetch once.
   Future<void> hydrateAfterLogin(
     AuthLoginPayload payload, {
     UserProfileDto? preloadedProfile,
@@ -47,11 +50,16 @@ class PatientAccountController extends _$PatientAccountController {
       return;
     }
     final active = linked.first;
-    if (preloadedProfile != null) {
+    final UserProfileDto? trusted = _trustedPreloadedProfile(
+      preloadedProfile,
+      linkedUserIds: linked,
+      activeUserId: active,
+    );
+    if (trusted != null) {
       state = PatientAccountState.ready(
         linkedUserIds: linked,
         activeUserId: active,
-        profile: preloadedProfile,
+        profile: trusted,
       );
       return;
     }
@@ -80,6 +88,24 @@ class PatientAccountController extends _$PatientAccountController {
     } finally {
       tracker.recoverStuckFetching(op);
     }
+  }
+
+  /// Drop preloaded DTO if it is not the active linked user (avoids mismatched session/UI).
+  UserProfileDto? _trustedPreloadedProfile(
+    UserProfileDto? profile, {
+    required List<int> linkedUserIds,
+    required int activeUserId,
+  }) {
+    if (profile == null) {
+      return null;
+    }
+    if (profile.id != activeUserId) {
+      return null;
+    }
+    if (!linkedUserIds.contains(profile.id)) {
+      return null;
+    }
+    return profile;
   }
 
   /// Cold start / navigation: load profile when storage has linked patient ids.

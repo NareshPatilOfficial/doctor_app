@@ -26,10 +26,50 @@ class UsersRepository {
       if (data == null) {
         throw UsersRepositoryException('Empty profile response');
       }
-      return UserProfileDto.fromJson(data);
+      final Map<String, dynamic> normalized = _normalizeSingleUserPayload(data);
+      try {
+        return UserProfileDto.fromJson(normalized);
+      } on Object {
+        throw UsersRepositoryException('Could not parse profile response');
+      }
+    } on UsersRepositoryException {
+      rethrow;
     } on DioException catch (e) {
       throw UsersRepositoryException(_messageOrDefault(e, 'Could not load profile'));
     }
+  }
+
+  /// Single-user GET may return the entity directly or wrapped (`data`, `user`, …).
+  /// [id] may be a number, numeric string, or only `userId`.
+  Map<String, dynamic> _normalizeSingleUserPayload(Map<String, dynamic> raw) {
+    var map = Map<String, dynamic>.from(raw);
+    if (!map.containsKey('id') || map['id'] == null) {
+      final nested = map['data'] ?? map['user'] ?? map['result'] ?? map['payload'];
+      if (nested is Map) {
+        map = Map<String, dynamic>.from(nested);
+      }
+    }
+    if ((!map.containsKey('id') || map['id'] == null) && map['userId'] != null) {
+      final uid = map['userId'];
+      if (uid is num) {
+        map['id'] = uid.toInt();
+      } else if (uid is String) {
+        final p = int.tryParse(uid);
+        if (p != null) {
+          map['id'] = p;
+        }
+      }
+    }
+    final idVal = map['id'];
+    if (idVal is String) {
+      final parsed = int.tryParse(idVal);
+      if (parsed != null) {
+        map['id'] = parsed;
+      }
+    } else if (idVal is num) {
+      map['id'] = idVal.toInt();
+    }
+    return map;
   }
 
   /// Query: `userIds=1,2,3&size=100`

@@ -77,17 +77,24 @@ class _PatientSwitchUserScreenState extends ConsumerState<PatientSwitchUserScree
     final id = row.id;
     try {
       await ref.read(patientAccountControllerProvider.notifier).switchToUserId(id);
+    } on Object catch (e) {
       if (!mounted) {
         return;
       }
-      context.pop();
-    } on Object {
-      if (!mounted) {
-        return;
-      }
+      final msg = e is UsersRepositoryException
+          ? e.message
+          : (e is StateError ? e.message : e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not switch user')),
+        SnackBar(content: Text(msg.isNotEmpty ? msg : 'Could not switch user')),
       );
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    // Do not treat navigation failures as a failed switch (switch already succeeded).
+    if (context.canPop()) {
+      context.pop();
     }
   }
 

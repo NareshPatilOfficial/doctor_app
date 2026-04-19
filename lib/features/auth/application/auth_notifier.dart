@@ -9,6 +9,7 @@ import 'package:doctorbridge_mobile_ui/features/auth/data/models/auth_api_models
 import 'package:doctorbridge_mobile_ui/features/patient/application/patient_account_controller.dart';
 import 'package:doctorbridge_mobile_ui/features/patient/data/models/user_profile_dto.dart';
 import 'package:doctorbridge_mobile_ui/features/patient/data/users_repository_providers.dart';
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'auth_operation_ids.dart';
@@ -175,8 +176,17 @@ class AuthNotifier extends _$AuthNotifier {
     }
   }
 
-  /// Persists patient linked-account ids, writes token so Dio can GET profile,
-  /// merges `/api/v1/users/{id}` into [User], then hydrates patient state.
+  /// Post-login session pipeline (single profile GET when possible):
+  ///
+  /// 1. Persist patient linked ids (if role is patient).
+  /// 2. **`persistSession`** with login [User] so [Dio] can attach Authorization
+  ///    for the next request (token is read from storage).
+  /// 3. **One** `GET /api/v1/users/{primaryId}` — [primaryId] matches
+  ///    [AuthLoginPayload.resolvedLinkedUserIds.first] when present, else
+  ///    [User.id]. On failure, session continues with login-only [User].
+  /// 4. **`applyAuthenticatedSession`** with merged [User] (or login [User]).
+  /// 5. **[PatientAccountController.hydrateAfterLogin]** with the same profile
+  ///    DTO when step 3 succeeded, so patient UI does **not** call GET again.
   Future<void> _persistLinkedIdsApplySessionAndHydratePatient(AuthLoginPayload payload) async {
     final storage = ref.read(tokenStorageProvider);
     if (payload.user.role == UserRole.patient && payload.resolvedLinkedUserIds.isNotEmpty) {
@@ -187,21 +197,14 @@ class AuthNotifier extends _$AuthNotifier {
     } else {
       await storage.clearPatientLinkedAccounts();
     }
-    // Token must be on disk before [UsersRepository.getUser] (Dio auth header).
     await storage.persistSession(
       accessToken: payload.jwtToken,
       refreshToken: null,
       user: payload.user,
     );
-    UserProfileDto? profile;
     final int? primaryId = _primaryProfileUserId(payload);
-    if (primaryId != null) {
-      try {
-        profile = await ref.read(usersRepositoryProvider).getUser(primaryId);
-      } on Object {
-        profile = null;
-      }
-    }
+    final UserProfileDto? profile =
+        primaryId != null ? await _fetchPrimaryUserProfileOrNull(primaryId) : null;
     final User sessionUser =
         profile != null ? mergeLoginUserWithProfile(payload.user, profile) : payload.user;
     await ref.read(sessionControllerProvider.notifier).applyAuthenticatedSession(
@@ -214,13 +217,29 @@ class AuthNotifier extends _$AuthNotifier {
               payload,
               preloadedProfile: profile,
             );
-      } on Object {
-        // Session still valid with login + optional profile merge.
+      } on Object catch (e, st) {
+        // Session is already persisted; patient shell is best-effort.
+        if (kDebugMode) {
+          debugPrint('hydrateAfterLogin failed (session still valid): $e\n$st');
+        }
       }
     }
   }
 
-  /// First id from login [userIds], else parsed [User.id].
+  /// Exactly one `GET /api/v1/users/{primaryId}` after login; never throws.
+  Future<UserProfileDto?> _fetchPrimaryUserProfileOrNull(int primaryId) async {
+    try {
+      final profile = await ref.read(usersRepositoryProvider).getUser(primaryId);
+      if (profile.id != primaryId) {
+        return null;
+      }
+      return profile;
+    } on Object {
+      return null;
+    }
+  }
+
+  /// Same id used for profile GET and (for patients) default active linked account.
   int? _primaryProfileUserId(AuthLoginPayload payload) {
     final linked = payload.resolvedLinkedUserIds;
     if (linked.isNotEmpty) {
